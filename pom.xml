@@ -32,9 +32,9 @@
     <inceptionYear>2018</inceptionYear>
 
     <scm>
-        <url>https://github.com/muter/maven-deb-plugin</url>
-        <connection>https://github.com/muter/maven-deb-plugin.git</connection>
-        <developerConnection>git@github.com:muter/maven-deb-plugin.git</developerConnection>
+        <url>https://github.com/muter/deb-maven-plugin</url>
+        <connection>https://github.com/muter/deb-maven-plugin.git</connection>
+        <developerConnection>git@github.com:muter/deb-maven-plugin.git</developerConnection>
     </scm>
 
     <licenses>
