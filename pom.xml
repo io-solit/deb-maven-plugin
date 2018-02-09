@@ -15,6 +15,33 @@
         <project.build.sourceEncoding>UTF-8</project.build.sourceEncoding>
     </properties>
 
+    <name>Maven .deb plugin</name>
+
+    <description>
+        Maven plugin create .deb packages, creating control file, copyright file
+        and transitively copying runtime dependencies.
+    </description>
+
+    <developers>
+        <developer>
+            <name>yaga</name>
+            <url>https://github.com/muter/</url>
+        </developer>
+    </developers>
+
+    <inceptionYear>2018</inceptionYear>
+
+    <scm>
+        <url>https://github.com/muter/maven-deb-plugin</url>
+        <connection>https://github.com/muter/maven-deb-plugin.git</connection>
+        <developerConnection>git@github.com:muter/maven-deb-plugin.git</developerConnection>
+    </scm>
+
+    <licenses>
+        <license>
+            <name>BSD License 2.0</name>
+        </license>
+    </licenses>
 
     <dependencies>
 
