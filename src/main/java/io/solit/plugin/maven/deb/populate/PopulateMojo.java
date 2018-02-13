@@ -6,7 +6,6 @@ import org.apache.maven.plugin.MojoFailureException;
 import org.apache.maven.plugins.annotations.LifecyclePhase;
 import org.apache.maven.plugins.annotations.Mojo;
 import org.apache.maven.plugins.annotations.ResolutionScope;
-import org.apache.maven.shared.dependency.graph.DependencyNode;
 
 import java.io.File;
 import java.io.IOException;
@@ -27,7 +26,7 @@ import java.nio.file.StandardCopyOption;
 public class PopulateMojo extends AbstractDependencyMojo<Void> {
 
     @Override
-    protected void processDependency(DependencyNode node, Void nothing, File dependencyDir, boolean root) throws MojoExecutionException {
+    protected void processDependency(DependencyArtifact node, Void nothing, File dependencyDir, boolean root) throws MojoExecutionException {
         try {
             File src = node.getArtifact().getFile();
             if (src == null)

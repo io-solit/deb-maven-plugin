@@ -12,14 +12,7 @@ import org.apache.maven.plugin.MojoFailureException;
 import org.apache.maven.plugins.annotations.LifecyclePhase;
 import org.apache.maven.plugins.annotations.Mojo;
 import org.apache.maven.plugins.annotations.Parameter;
-import org.apache.maven.plugins.annotations.Component;
 import org.apache.maven.project.MavenProject;
-import org.apache.maven.project.ProjectBuilder;
-import org.apache.maven.project.ProjectBuildingException;
-import org.apache.maven.project.ProjectBuildingResult;
-import org.apache.maven.project.DefaultProjectBuildingRequest;
-import org.apache.maven.project.ProjectBuildingRequest;
-import org.apache.maven.shared.dependency.graph.DependencyNode;
 
 import java.io.File;
 import java.io.FileOutputStream;
@@ -153,9 +146,6 @@ public class CopyrightMojo extends AbstractDependencyMojo<Copyright> {
     @Parameter
     private Boolean dependencyCopyrights;
 
-    @Component()
-    private ProjectBuilder projectBuilder;
-
     @Override
     public void execute() throws MojoExecutionException, MojoFailureException {
         try{
@@ -185,7 +175,7 @@ public class CopyrightMojo extends AbstractDependencyMojo<Copyright> {
     }
 
     @Override
-    protected void processDependency(DependencyNode node, Copyright copyright, File dependencyDir, boolean root) throws MojoExecutionException {
+    protected void processDependency(DependencyArtifact node, Copyright copyright, File dependencyDir, boolean root) {
         if (root)
             return;
         if (node.getArtifact().getFile() == null)
@@ -193,16 +183,7 @@ public class CopyrightMojo extends AbstractDependencyMojo<Copyright> {
         Path dependencyFile = new File(dependencyDir, node.getArtifact().getFile().getName()).toPath();
         String file = StreamSupport.stream(stageDir.toPath().relativize(dependencyFile).spliterator(), false)
                 .map(Object::toString).collect(Collectors.joining("/", "/", ""));
-        ProjectBuildingResult build;
-        try {
-            ProjectBuildingRequest pbr = new DefaultProjectBuildingRequest(session.getProjectBuildingRequest());
-            pbr.setProcessPlugins(false);
-            pbr.setResolveDependencies(false);
-            build = projectBuilder.build(node.getArtifact(), pbr);
-        } catch (ProjectBuildingException e) {
-            throw new MojoExecutionException("Unable to build project for " + node.getArtifact(), e);
-        }
-        MavenProject project = build.getProject();
+        MavenProject project = node.getProject();
         String cpr = getProjectCopyright(project);
         if (cpr == null)
             return;

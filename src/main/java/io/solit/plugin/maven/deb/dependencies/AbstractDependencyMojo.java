@@ -1,6 +1,7 @@
 package io.solit.plugin.maven.deb.dependencies;
 
 import org.apache.maven.artifact.Artifact;
+import org.apache.maven.artifact.resolver.filter.AndArtifactFilter;
 import org.apache.maven.artifact.resolver.filter.ScopeArtifactFilter;
 import org.apache.maven.execution.MavenSession;
 import org.apache.maven.plugin.AbstractMojo;
@@ -10,13 +11,22 @@ import org.apache.maven.plugins.annotations.Component;
 import org.apache.maven.plugins.annotations.Parameter;
 import org.apache.maven.project.DefaultProjectBuildingRequest;
 import org.apache.maven.project.MavenProject;
+import org.apache.maven.project.ProjectBuilder;
+import org.apache.maven.project.ProjectBuildingException;
 import org.apache.maven.project.ProjectBuildingRequest;
 import org.apache.maven.shared.dependency.graph.DependencyGraphBuilder;
 import org.apache.maven.shared.dependency.graph.DependencyGraphBuilderException;
 import org.apache.maven.shared.dependency.graph.DependencyNode;
-import org.apache.maven.shared.dependency.graph.traversal.DependencyNodeVisitor;
 
 import java.io.File;
+import java.util.ArrayDeque;
+import java.util.ArrayList;
+import java.util.Arrays;
+import java.util.Collections;
+import java.util.Deque;
+import java.util.List;
+
+import static org.apache.maven.model.building.ModelBuildingRequest.VALIDATION_LEVEL_MINIMAL;
 
 /**
  * Abstract mojo for dependency traversal
@@ -86,39 +96,33 @@ public abstract class AbstractDependencyMojo<T> extends AbstractMojo {
     @Parameter
     private File dependencyDir;
 
+    @Component()
+    private ProjectBuilder projectBuilder;
+
     protected void traverseDependencies(T context) throws MojoExecutionException, MojoFailureException {
         try {
             ProjectBuildingRequest request = new DefaultProjectBuildingRequest(session.getProjectBuildingRequest());
             File dependencyDirectory = getDependencyDirectory();
             request.setProject(project);
-            DependencyNode root = dependencyGraphBuilder.buildDependencyGraph(request, new ScopeArtifactFilter(Artifact.SCOPE_RUNTIME));
-            root.accept(new DependencyNodeVisitor() {
-                        @Override
-                        public boolean visit(DependencyNode node) {
-                            if (traverseExclusions != null && traverseExclusions.exclude(node))
-                                return false;
-                            try {
-                                if (packageExclusions == null || !packageExclusions.exclude(node))
-                                    processDependency(node, context, dependencyDirectory, node == root);
-                            } catch (MojoExecutionException e) {
-                                throw new TransportException(e);
-                            }
-                            return true;
-                        }
-
-                        @Override
-                        public boolean endVisit(DependencyNode node) {
-                            return true;
-                        }
-                    });
+            DependencyNode root = dependencyGraphBuilder.buildDependencyGraph(request, new AndArtifactFilter(Arrays.asList(
+                            new ScopeArtifactFilter(Artifact.SCOPE_RUNTIME),
+                            artifact -> traverseExclusions == null || !traverseExclusions.exclude(artifact)
+            )));
+            Deque<DependencyArtifact> front = new ArrayDeque<>(Collections.singletonList(new DependencyArtifact(root, project)));
+            for (DependencyArtifact a = front.poll(); a != null; a = front.poll()) {
+                a.getChildren().forEach(front::push);
+                if (packageExclusions == null || !packageExclusions.exclude(a.getArtifact()))
+                    processDependency(a, context, dependencyDirectory, a.node == root);
+            }
         } catch (DependencyGraphBuilderException e) {
             throw new MojoFailureException("Unable to collect dependencies" + e.getMessage(), e);
-        } catch (TransportException e) {
-            throw e.getCause();
+        } catch (ProjectBuildingException e) {
+            throw new MojoFailureException("Unable to build project" + e.getMessage(), e);
         }
     }
 
-    protected abstract void processDependency(DependencyNode node, T context, File dependencyDir, boolean root) throws MojoExecutionException;
+    protected abstract void processDependency(DependencyArtifact artifact, T context, File dependencyDir, boolean root)
+            throws MojoExecutionException;
 
     protected File getDependencyDirectory() throws MojoExecutionException {
         File dependencyDir = this.dependencyDir;
@@ -132,15 +136,39 @@ public abstract class AbstractDependencyMojo<T> extends AbstractMojo {
         return dependencyDir;
     }
 
-    private static class TransportException extends RuntimeException {
+    protected class DependencyArtifact {
+        private final DependencyNode node;
+        private final MavenProject project;
 
-        public TransportException(MojoExecutionException cause) {
-            super(cause);
+        public DependencyArtifact(DependencyNode node, MavenProject project) {
+            this.node = node;
+            this.project = project;
         }
 
-        @Override
-        public synchronized MojoExecutionException getCause() {
-            return (MojoExecutionException) super.getCause();
+        public Artifact getArtifact() {
+            return node.getArtifact();
         }
+
+        public MavenProject getProject() {
+            return project;
+        }
+
+        List<DependencyArtifact> getChildren() throws ProjectBuildingException {
+            List<DependencyArtifact> result = new ArrayList<>(node.getChildren().size());
+            for (DependencyNode node: node.getChildren()) {
+                ProjectBuildingRequest request = new DefaultProjectBuildingRequest()
+                        .setLocalRepository(session.getLocalRepository())
+                        .setRemoteRepositories(project.getRemoteArtifactRepositories())
+                        .setRepositorySession(session.getRepositorySession())
+                        .setSystemProperties(session.getSystemProperties())
+                        .setProcessPlugins(false)
+                        .setResolveDependencies(false)
+                        .setValidationLevel(VALIDATION_LEVEL_MINIMAL);
+                MavenProject project = projectBuilder.build(node.getArtifact(), request).getProject();
+                result.add(new DependencyArtifact(node, project));
+            }
+            return result;
+        }
+
     }
 }
