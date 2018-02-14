@@ -15,7 +15,7 @@ public class Attributes {
     private PackagePriority priority = PackagePriority.optional;
     private String source;
     private Boolean essential;
-    private String builtUsing = "maven";
+    private String builtUsing;
     private Set<String> depends = new HashSet<>();
     private Set<String> preDepends = new HashSet<>();
     private Set<String> recommends = new HashSet<>();

@@ -51,12 +51,10 @@ import java.util.stream.StreamSupport;
  *             If no licenses present, project is marked as a public domain.
  *         </li>
  *     </ul>
- * </p>
  * <p>
  *     If <code>dependencyCopyrights</code> parameter is set to true, all dependencies filtered by
  *     <code>traversalExclusions</code> and <code>packageExclusions</code> are grouped by their copyright and licenses
  *      and included as a separate file. Copyright and license strings are constructed the same way as for this project
- * </p>
  * @author yaga
  * @see <a href="https://www.debian.org/doc/packaging-manuals/copyright-format/1.0/">copyright specification</a>
  * @since 23.01.18
