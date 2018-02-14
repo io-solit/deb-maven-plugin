@@ -54,7 +54,6 @@ import java.util.stream.Collectors;
  *         <li>copies data files from a stage dir to a data archive, following present symlinks</li>
  *         <li>creates symbolic links based on a configuration</li>
  *     </ul>
- * </p>
  * @author yaga
  * @since 18.01.18
  */
@@ -161,7 +160,6 @@ public class PackageMojo extends AbstractMojo {
      *             excludes have higher priority than includes
      *         </li>
      *     </ol>
-     * </p>
      */
     @Parameter
     private List<PermissionModification> permissions;

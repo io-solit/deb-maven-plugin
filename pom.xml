@@ -4,9 +4,9 @@
          xsi:schemaLocation="http://maven.apache.org/POM/4.0.0 http://maven.apache.org/xsd/maven-4.0.0.xsd">
     <modelVersion>4.0.0</modelVersion>
 
-    <groupId>io.solit</groupId>
+    <groupId>io.solit.maven</groupId>
     <artifactId>deb-maven-plugin</artifactId>
-    <version>0.5-RC2</version>
+    <version>0.5-RC3</version>
     <packaging>maven-plugin</packaging>
 
     <properties>
@@ -16,15 +16,17 @@
     </properties>
 
     <name>.deb maven plugin</name>
+    <url>https://github.com/io-solit/deb-maven-plugin</url>
 
     <description>
-        Maven plugin create .deb packages, creating control file, copyright file
+        Maven plugin to create .deb packages, creating control file, copyright file
         and transitively copying runtime dependencies.
     </description>
 
     <developers>
         <developer>
             <name>yaga</name>
+            <email>yaga@solit.io</email>
             <url>https://github.com/muter/</url>
         </developer>
     </developers>
@@ -32,14 +34,15 @@
     <inceptionYear>2018</inceptionYear>
 
     <scm>
-        <url>https://github.com/muter/deb-maven-plugin</url>
-        <connection>https://github.com/muter/deb-maven-plugin.git</connection>
-        <developerConnection>git@github.com:muter/deb-maven-plugin.git</developerConnection>
+        <url>https://github.com/io-solit/deb-maven-plugin</url>
+        <connection>scm:git:https://github.com/io-solit/deb-maven-plugin.git</connection>
+        <developerConnection>scm:git:ssh://git@github.com:io-solit/deb-maven-plugin.git</developerConnection>
     </scm>
 
     <licenses>
         <license>
             <name>BSD License 2.0</name>
+            <url>https://opensource.org/licenses/BSD-3-Clause</url>
         </license>
     </licenses>
 
@@ -84,6 +87,17 @@
 
     </dependencies>
 
+    <distributionManagement>
+        <snapshotRepository>
+            <id>ossrh</id>
+            <url>https://oss.sonatype.org/content/repositories/snapshots</url>
+        </snapshotRepository>
+        <repository>
+            <id>ossrh</id>
+            <url>https://oss.sonatype.org/service/local/staging/deploy/maven2/</url>
+        </repository>
+    </distributionManagement>
+
     <build>
         <plugins>
 
@@ -102,7 +116,7 @@
             <plugin>
                 <groupId>org.apache.maven.plugins</groupId>
                 <artifactId>maven-source-plugin</artifactId>
-                <version>2.4</version>
+                <version>3.0.1</version>
                 <executions>
                     <execution>
                         <id>create-sources</id>
@@ -112,7 +126,55 @@
                     </execution>
                 </executions>
             </plugin>
+
+            <plugin>
+                <groupId>org.apache.maven.plugins</groupId>
+                <artifactId>maven-javadoc-plugin</artifactId>
+                <version>3.0.0</version>
+                <executions>
+                    <execution>
+                        <id>create-javadoc</id>
+                        <goals>
+                            <goal>jar</goal>
+                        </goals>
+                    </execution>
+                </executions>
+            </plugin>
+
         </plugins>
     </build>
+
+    <profiles>
+        <profile>
+            <id>signing</id>
+            <activation>
+                <property>
+                    <name>gpg.keyname</name>
+                </property>
+            </activation>
+            <build>
+                <plugins>
+                    <plugin>
+                        <groupId>org.apache.maven.plugins</groupId>
+                        <artifactId>maven-gpg-plugin</artifactId>
+                        <version>1.6</version>
+                        <configuration>
+                            <keyname>${gpg.keyname}</keyname>
+                            <passphraseServerId>${gpg.keyname}</passphraseServerId>
+                        </configuration>
+                        <executions>
+                            <execution>
+                                <id>sign-artifacts</id>
+                                <phase>verify</phase>
+                                <goals>
+                                    <goal>sign</goal>
+                                </goals>
+                            </execution>
+                        </executions>
+                    </plugin>
+                </plugins>
+            </build>
+        </profile>
+    </profiles>
 
 </project>
