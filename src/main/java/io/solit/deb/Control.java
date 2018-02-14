@@ -23,7 +23,7 @@ public class Control {
     private final static String PACKAGE_HEADER = "Package", VERSION_HEADER = "Version", SECTION_HEADER = "Section",
             PRIORITY_HEADER = "Priority", ARCHITECTURE_HEADER = "Architecture", MAINTAINER_HEADER = "Maintainer",
             DESCRIPTION_HEADER = "Description", SOURCE_HEADER = "Source", ESSENTIAL_HEADER = "Essential",
-            INSTALLED_SIZE_HEADER = "Installed-Size", HOMEPAGE_HEADER = "Homepage", BUILT_USING_HEADER = "Build-Using",
+            INSTALLED_SIZE_HEADER = "Installed-Size", HOMEPAGE_HEADER = "Homepage", BUILT_USING_HEADER = "Built-Using",
             DEPENDS_HEADER = "Depends", PRE_DEPENDS_HEADER = "Pre-Depends", RECOMMENDS_HEADER = "Recommends",
             SUGGESTS_HEADER = "Suggests", ENHANCES_HEADER = "Enhances", BREAKS_HEADER = "Breaks",
             CONFLICTS_HEADER = "Conflicts", PROVIDES_HEADER = "Provides";

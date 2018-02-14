@@ -56,7 +56,6 @@ public abstract class AbstractDependencyMojo<T> extends AbstractMojo {
      *         </li>
      *         <li><code>pattern</code> - a regular expression applied to a gav string</li>
      *     </ul>
-     * </p>
      */
     @Parameter
     private DependenciesFilter traverseExclusions;
@@ -73,7 +72,6 @@ public abstract class AbstractDependencyMojo<T> extends AbstractMojo {
      *         </li>
      *         <li><code>pattern</code> - a regular expression applied to a gav string</li>
      *     </ul>
-     * </p>
      */
     @Parameter
     private DependenciesFilter packageExclusions;
