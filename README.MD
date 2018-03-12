@@ -1,15 +1,27 @@
-# Maven Debian Plugin
+# Deb Maven Plugin
 
-Maven plugin create .deb packages, creating control file, copyright file
+Maven plugin for creating .deb packages, creating control file, copyright file
 and transitively copying runtime dependencies.
 
 Plugin is platform-independent and does not require additional external tools.
 
 Requires java 8 and maven 3.3
 
+Plugin is available from central maven repository. To use it, simply add the following to a 
+`build/plugins` section of the pom file. 
+
+```xml
+<plugin>
+    <groupId>io.solit.maven</groupId>
+    <artifactId>deb-maven-plugin</artifactId>
+    <version>0.5</version>
+</plugin>
+```
+
 ## Goals:
 * `pupulate` - transitively copy runtime dependencies to a specified directory
 * `copyright` - create a machine readable copyright file
+* `man` - compile a man pages from markdown source files
 * `package` - create a .deb file with control file
 
 ## Details:
@@ -73,7 +85,7 @@ Full configuration:
 ### `copyright` goal
 
 Creates a machine-readable copyright file according to
-[specification](https://www.debian.org/doc/packaging-manuals/copyright-format/1.0/). May include copyright for
+[specification][mr-copyright]. May include copyright for
 dependencies copied into a package
 
 Copyright information may be specified in a configuration or extracted from a pom file if no
@@ -188,6 +200,75 @@ Full configuration:
         filtering: specifying only a version will exclude all artifacts of that version
     *   `pattern` - a regular expression to check artifact string (groupId:artifactId:version\[:classifier\])
         against
+    
+### Man goal
+
+Goal generates linux man pages from markdown source. Generation process is similar to one used by 
+[`ruby-ronn`][ronn] utility.
+
+Goal processes every file in source directory with `.md` extension (case-insensitive), and converts it to a 
+man page.
+Files with other extensions are silently ignored.
+
+Each processed file must contain a level one header specifying man title, section and short description used 
+by man-db to
+generate apropos database. File content before header which follows this format will be ignored
+
+For instance, the following code will create man page with title `foo` in section `5` with short description 
+`bar baz qux`
+
+```
+# foo(5) - bar baz qux
+======================
+```
+
+Other headers in file will be turned to a sections of man file, if header of level one or two, and to a 
+subheader for other levels.
+
+Generation supports, lists (including nested ones), definition lists, code blocks, quotes, emphasis and 
+other markdown feature described in
+[commonmark][comonmark] markdown specification.
+
+For further details on markdown processing see [man-markdown.md](man-markdown.md)
+
+```xml
+<configuration>
+<manSourceDirectory>${project.basedir}/src/deb/doc</manSourceDirectory>
+    <manDestinationDirectory></manDestinationDirectory>
+    <deduceManTitle>true</deduceManTitle>
+    <strictManParsing>false</strictManParsing>
+    <manSource></manSource>
+    <manName></manName>
+    <packageName>${project.artifactId}</packageName>
+    <stageDir>${project.build.directory}/deb</stageDir>
+    <sourceEncoding>${project.build.sourceEncoding}</sourceEncoding>
+</configuration>
+```
+*   `manSourceDirectory` - directory to read markdown files for man page generation.  
+    Only files with `.md` (case-insensitive) will be processed.  
+    Subdirectory structure will be preserved, with exception for `.md` files in directory itself. Such files
+    will be placed to a directory named `man[sectionNumber]`  
+    Defaults to `${project.basedir}/src/deb/doc`
+*   `manDestinationDirectory` - Directory to write generated man pages to.  
+    Subdirectory structure of source directory will be preserved, with exception for `.md` files in directory
+    itself. Such files will be placed to a directory named `man[sectionNumber]`  
+    If not specified `<stageDir>/usr/share/man` will be used.
+*   `deduceManTitle` - Whether to try to create man title and description, if no proper heading found inside 
+    markdown file.  
+    Title will be deduced the following way:
+    -   if file name matches `title.[number].md` pattern, then <code>title</code> is used as man title,
+        and `[number]` as man section
+    -   else if file is in directory `man[number]`, than file name (without extension) is used as man title and,
+        `[number]` as man section
+    -   otherwise file name (without extension) is used as title and section is assumed to be `1`
+    
+    For short description required by man page specification combination of title and section name will be used
+*   `strictManParsing` - Treat parser and validation warnings as failures and abort generation.
+*   `manSource` - manual sources specified in a manual header. Package name will be used by default.
+*   `manName` - manual name specified in a manual header.
+*   `packageName` - name of debian package
+*   `stageDir` - stage directory, containing files to be included into a deb package
+*   `sourceEncoding` - encoding used to read source files
 
 ### Package goal
 
@@ -269,3 +350,7 @@ This goal:
     for every link:
     *   `name` - name of a link file
     *   `linkDestination` - name of a destination file (file man not exist)
+
+[mr-copyright]: https://www.debian.org/doc/packaging-manuals/copyright-format/1.0/
+[ronn]: https://manpages.debian.org/stretch/ruby-ronn/ronn-format.7.en.html
+[comonmark]: https://spec.commonmark.org/0.28/
