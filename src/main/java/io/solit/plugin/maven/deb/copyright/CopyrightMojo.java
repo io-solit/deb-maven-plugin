@@ -254,9 +254,9 @@ public class CopyrightMojo extends AbstractDependencyMojo<Copyright> {
     private String getProjectCopyright(MavenProject project) {
         String prefix;
         if (project.getInceptionYear() != null)
-            prefix = "© " + project.getInceptionYear() + "-" + Year.now().getValue() + " ";
+            prefix = "\u00a9 " + project.getInceptionYear() + "-" + Year.now().getValue() + " ";
         else
-            prefix = "© " + Year.now().getValue() + " ";
+            prefix = "\u00a9 " + Year.now().getValue() + " ";
         String cpr = Optional.of(project).map(MavenProject::getOrganization)
                     .map(Organization::getName)
                     .map(prefix::concat)
