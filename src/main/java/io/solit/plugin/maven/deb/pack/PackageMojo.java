@@ -6,7 +6,6 @@ import io.solit.deb.Version;
 import org.apache.commons.compress.archivers.tar.TarArchiveEntry;
 import org.apache.commons.compress.archivers.tar.TarArchiveOutputStream;
 import org.apache.commons.compress.archivers.tar.TarConstants;
-import org.apache.commons.compress.utils.Charsets;
 import org.apache.commons.compress.utils.IOUtils;
 import org.apache.maven.plugin.AbstractMojo;
 import org.apache.maven.plugin.MojoExecutionException;
@@ -21,6 +20,7 @@ import java.io.FileInputStream;
 import java.io.IOException;
 import java.io.OutputStreamWriter;
 import java.io.Writer;
+import java.nio.charset.StandardCharsets;
 import java.nio.file.FileVisitOption;
 import java.nio.file.FileVisitResult;
 import java.nio.file.FileVisitor;
@@ -346,7 +346,7 @@ public class PackageMojo extends AbstractMojo {
     private void writeControl(TarArchiveOutputStream controlArchive, Control control) throws IOException {
         TarArchiveEntry entry = createTarEntry("control");
         ByteArrayOutputStream buffer = new ByteArrayOutputStream();
-        try (Writer wr = new OutputStreamWriter(buffer, Charsets.UTF_8)) {
+        try (Writer wr = new OutputStreamWriter(buffer, StandardCharsets.UTF_8)) {
             control.writeControlFile(wr);
         }
         entry.setSize(buffer.size());
@@ -359,7 +359,7 @@ public class PackageMojo extends AbstractMojo {
         long size;
         TarArchiveEntry entry = createTarEntry("md5sums");
         ByteArrayOutputStream buffer = new ByteArrayOutputStream();
-        try (Writer wr = new OutputStreamWriter(buffer, Charsets.UTF_8)) {
+        try (Writer wr = new OutputStreamWriter(buffer, StandardCharsets.UTF_8)) {
             size = writeCheckSumsAndComputeSize(wr);
         }
         entry.setSize(buffer.size());

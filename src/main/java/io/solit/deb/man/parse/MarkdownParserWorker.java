@@ -1,5 +1,6 @@
 package io.solit.deb.man.parse;
 
+import io.solit.deb.MarkdownUtils;
 import io.solit.deb.man.ManPage;
 import io.solit.deb.man.ManPart;
 import io.solit.deb.man.Section;
@@ -88,7 +89,7 @@ class MarkdownParserWorker extends AbstractVisitor {
                 if (h.getLevel() != 1)
                     continue;
                 String headerText;
-                Matcher header = HEADER_PATTERN.matcher(headerText = extractText(c));
+                Matcher header = HEADER_PATTERN.matcher(headerText = MarkdownUtils.extractText(c));
                 if (header.matches()) {
                     result = new ManPage(header.group(1).trim(), header.group(3).trim(), Integer.parseInt(header.group(2)));
                     if (skippedNodes)
@@ -121,7 +122,7 @@ class MarkdownParserWorker extends AbstractVisitor {
             section = new Section("\u00a0");
             warningHandler.accept("Encountered content without heading, using nameless section");
         } else {
-            section = new Section(extractText(currentNode));
+            section = new Section(MarkdownUtils.extractText(currentNode));
             currentNode = currentNode.getNext();
         }
         manPage.getAdditionalSections().add(section);
@@ -132,33 +133,6 @@ class MarkdownParserWorker extends AbstractVisitor {
             currentNode.accept(this);
         }
         containers.pop();
-    }
-
-    private String extractText(Node node) {
-        Deque<Node> nodes = new ArrayDeque<>();
-        StringBuilder builder = new StringBuilder();
-        for (Node n = node; n != null; n = nodes.poll()) {
-            if (n instanceof Text)
-                builder.append(Text.class.cast(n).getLiteral());
-            if (n instanceof Code)
-                builder.append(Code.class.cast(n).getLiteral());
-            if (n instanceof Link) {
-                Link l = (Link) n;
-                if (l.getFirstChild() == null) {
-                    if (l.getTitle() != null)
-                        builder.append(l.getTitle());
-                    else if (l.getDestination() != null)
-                        builder.append(l.getDestination());
-                }
-            }
-            if (n instanceof SoftLineBreak || n instanceof HardLineBreak)
-                builder.append(" ");
-            if (n instanceof HtmlInline)
-                builder.append(HtmlInline.class.cast(n).getLiteral());
-            for (Node c = n.getLastChild(); c != null; c = c.getPrevious())
-                nodes.push(c);
-        }
-        return builder.toString();
     }
 
     private CurrentParagraph getParagraph() {
@@ -231,7 +205,7 @@ class MarkdownParserWorker extends AbstractVisitor {
 
     @Override
     public void visit(Heading heading) {
-        String text = extractText(heading).trim();
+        String text = MarkdownUtils.extractText(heading).trim();
         if (!text.isEmpty())
             containers.peek().accept(new Subheader(text));
     }
