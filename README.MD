@@ -22,6 +22,7 @@ Plugin is available from central maven repository. To use it, simply add the fol
 * `pupulate` - transitively copy runtime dependencies to a specified directory
 * `copyright` - create a machine readable copyright file
 * `man` - compile a man pages from markdown source files
+* `changelog` - copy and/or convert changelog to debian format
 * `package` - create a .deb file with control file
 
 ## Details:
@@ -233,7 +234,7 @@ For further details on markdown processing see [man-markdown.md](man-markdown.md
 
 ```xml
 <configuration>
-<manSourceDirectory>${project.basedir}/src/deb/doc</manSourceDirectory>
+    <manSourceDirectory>${project.basedir}/src/deb/doc</manSourceDirectory>
     <manDestinationDirectory></manDestinationDirectory>
     <deduceManTitle>true</deduceManTitle>
     <strictManParsing>false</strictManParsing>
@@ -269,6 +270,55 @@ For further details on markdown processing see [man-markdown.md](man-markdown.md
 *   `packageName` - name of debian package
 *   `stageDir` - stage directory, containing files to be included into a deb package
 *   `sourceEncoding` - encoding used to read source files
+
+### Changelog goal
+
+This goal creates and/or copies a changelog file as requested by debian policy
+    
+If `copyOriginalChangelog` is set to `true`, `upstreamChangelogSource` file
+will be gzipped and copied into `changelogDestinationDirectory` as *changelog.gz*
+
+If `convertToDebianChangelog` is set, plugin will try to parse `changelogSource` as
+markdown file written according to [keepachangelog.com][keep-a-changelog] recommendations and
+write a changelog in a debian format as *changelog.Debian.gz*
+
+Details on conversion process can be found in [keepachangelog-markdown.md](keepachangelog-markdown.md)
+
+```xml
+<configuration>
+    <copyOriginalChangelog>false</copyOriginalChangelog>
+    <convertToDebianChangelog>true</convertToDebianChangelog>
+    <appendCurrentVersionChangeSet>false</appendCurrentVersionChangeSet>
+    <version>${project.version}</version>
+    <revision></revision>
+    <changelogSource>${project.basedir}/changelog.md</changelogSource>
+    <upstreamChangelogSource>${project.basedir}/changelog.md</upstreamChangelogSource>
+    <changelogDestinationDirectory></changelogDestinationDirectory>
+    <stageDir>${project.build.directory}/deb</stageDir>
+    <packageName>${project.artifactId}</packageName>
+    <maintainer>${project.developers[0].name}</maintainer>
+    <maintainerEmail>${project.developers[0].email}</maintainerEmail>
+    <targetDistribution>stable</targetDistribution>
+    <sourceEncoding>${project.build.sourceEncoding}</sourceEncoding>
+</configuration>
+```
+*   `copyOriginalChangelog` - Whether to copy a gzipped original changelog to a destination folder
+*   `convertToDebianChangelog` - Whether to try parsing changelog and converting it to a form
+    specified by debian policy
+*   `appendCurrentVersionChangeSet` - if current version does not match latest version in a changelog, 
+    and this option is set to true, plugin will add a yanked change set to a generated changelog
+*   `version` - upstream part of a current package version
+*   `revision` - revision part of a current  package version
+*   `changelogSource` - A source file for debian changelog
+*   `upstreamChangelogSource` - A source file for upstream changelog
+*   `changelogDestinationDirectory` - Directory to write changelog to. If not specified
+    `<stageDir>/usr/share/doc/<packageName>` will be used
+*   `stageDir` - Stage directory, containing files to be included into a deb package
+*   `packageName` - Name of debian package
+*   `maintainer` - Package maintainer's name
+*   `maintainerEmail` - Package maintainer's email address
+*   `targetDistribution` - A distribution to write to changelog
+*   `sourceEncoding` - Encoding used to read source file
 
 ### Package goal
 
@@ -354,3 +404,4 @@ This goal:
 [mr-copyright]: https://www.debian.org/doc/packaging-manuals/copyright-format/1.0/
 [ronn]: https://manpages.debian.org/stretch/ruby-ronn/ronn-format.7.en.html
 [comonmark]: https://spec.commonmark.org/0.28/
+[keep-a-changelog]: https://keepachangelog.com/en/1.0.0/

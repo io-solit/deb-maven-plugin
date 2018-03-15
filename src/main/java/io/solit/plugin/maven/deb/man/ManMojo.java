@@ -4,7 +4,8 @@ import io.solit.deb.man.ManPage;
 import io.solit.deb.man.Section;
 import io.solit.deb.man.parse.ManParseException;
 import io.solit.deb.man.parse.MarkdownParser;
-import org.apache.commons.compress.utils.Charsets;
+import org.apache.commons.compress.compressors.gzip.GzipCompressorOutputStream;
+import org.apache.commons.compress.compressors.gzip.GzipParameters;
 import org.apache.maven.plugin.AbstractMojo;
 import org.apache.maven.plugin.MojoExecutionException;
 import org.apache.maven.plugin.MojoFailureException;
@@ -23,6 +24,7 @@ import java.io.OutputStreamWriter;
 import java.io.Reader;
 import java.io.Writer;
 import java.nio.charset.Charset;
+import java.nio.charset.StandardCharsets;
 import java.nio.file.FileVisitResult;
 import java.nio.file.Files;
 import java.nio.file.Path;
@@ -36,7 +38,7 @@ import java.util.Set;
 import java.util.function.Consumer;
 import java.util.regex.Matcher;
 import java.util.regex.Pattern;
-import java.util.zip.GZIPOutputStream;
+import java.util.zip.Deflater;
 
 /**
  * Goal generates linux man pages from markdown source. Generation process is similar to one used by <code>ruby-ronn</code> utility.
@@ -239,10 +241,12 @@ public class ManMojo extends AbstractMojo {
                 parent = destination.resolve(parent);
                 String destinationName = page.getName() + "." + page.getManSection() + ".gz";
                 Files.createDirectories(parent);
+                GzipParameters parameters = new GzipParameters();
+                parameters.setCompressionLevel(Deflater.BEST_COMPRESSION);
                 try(
                         OutputStream os = new FileOutputStream(parent.resolve(destinationName).toFile());
-                        OutputStream gz = new GZIPOutputStream(os);
-                        Writer wr = new OutputStreamWriter(gz, Charsets.UTF_8)
+                        OutputStream gz = new GzipCompressorOutputStream(os, parameters);
+                        Writer wr = new OutputStreamWriter(gz, StandardCharsets.UTF_8)
                 ) {
                     page.write(wr);
                 }

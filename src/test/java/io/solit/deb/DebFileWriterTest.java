@@ -1,18 +1,17 @@
 package io.solit.deb;
 
-import io.solit.deb.DebFileWriter;
 import org.apache.commons.compress.archivers.ar.ArArchiveEntry;
 import org.apache.commons.compress.archivers.ar.ArArchiveInputStream;
 import org.apache.commons.compress.archivers.tar.TarArchiveEntry;
 import org.apache.commons.compress.archivers.tar.TarArchiveInputStream;
 import org.apache.commons.compress.archivers.tar.TarArchiveOutputStream;
-import org.apache.commons.compress.utils.Charsets;
 import org.junit.jupiter.api.Test;
 
 import java.io.ByteArrayInputStream;
 import java.io.File;
 import java.io.FileInputStream;
 import java.io.IOException;
+import java.nio.charset.StandardCharsets;
 import java.util.zip.GZIPInputStream;
 
 import static org.junit.jupiter.api.Assertions.*;
@@ -110,7 +109,7 @@ public class DebFileWriterTest {
                     control.setSize(3);
                     tarArchiveOutputStream.putArchiveEntry(control);
                     try {
-                        tarArchiveOutputStream.write("foo".getBytes(Charsets.ISO_8859_1));
+                        tarArchiveOutputStream.write("foo".getBytes(StandardCharsets.ISO_8859_1));
                     } finally {
                         tarArchiveOutputStream.closeArchiveEntry();
                     }
@@ -120,7 +119,7 @@ public class DebFileWriterTest {
                     archiveEntry.setSize(3);
                     tarArchiveOutputStream.putArchiveEntry(archiveEntry);
                     try {
-                        tarArchiveOutputStream.write("bar".getBytes(Charsets.ISO_8859_1));
+                        tarArchiveOutputStream.write("bar".getBytes(StandardCharsets.ISO_8859_1));
                     } finally {
                         tarArchiveOutputStream.closeArchiveEntry();
                     }
@@ -138,7 +137,7 @@ public class DebFileWriterTest {
                     assertEquals(0b1000000110100100, debBinary.getMode());
                     byte[] buffer = new byte[4];
                     assertEquals(4, ar.read(buffer));
-                    assertEquals("2.0\n", new String(buffer, Charsets.ISO_8859_1));
+                    assertEquals("2.0\n", new String(buffer, StandardCharsets.ISO_8859_1));
                 }
                 {
                     ArArchiveEntry control = ar.getNextArEntry();
@@ -156,7 +155,7 @@ public class DebFileWriterTest {
                     assertEquals(3, nextTarEntry.getSize());
                     buffer = new byte[3];
                     assertEquals(3, controlArchive.read(buffer));
-                    assertEquals("foo", new String(buffer, Charsets.ISO_8859_1));
+                    assertEquals("foo", new String(buffer, StandardCharsets.ISO_8859_1));
                 }
 
                 {
@@ -175,7 +174,7 @@ public class DebFileWriterTest {
                     assertEquals(3, nextTarEntry.getSize());
                     buffer = new byte[3];
                     assertEquals(3, controlArchive.read(buffer));
-                    assertEquals("bar", new String(buffer, Charsets.ISO_8859_1));
+                    assertEquals("bar", new String(buffer, StandardCharsets.ISO_8859_1));
                 }
             }
         } finally {
