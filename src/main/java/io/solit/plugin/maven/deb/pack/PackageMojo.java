@@ -211,6 +211,8 @@ public class PackageMojo extends AbstractMojo {
 
     private void copyDataFiles(TarArchiveOutputStream dataArchive) throws IOException {
         Path start = stageDir.toPath();
+        if (!Files.isDirectory(start))
+            return;
         List<PermissionModification.CompiledPermissions> permissions = this.getPermissions().stream()
                 .map(PermissionModification::compile).collect(Collectors.toList());
         FileVisitor<Path> fv = new SimpleFileVisitor<Path>() {
@@ -325,6 +327,8 @@ public class PackageMojo extends AbstractMojo {
 
     private void copyControlFiles(TarArchiveOutputStream controlArchive) throws IOException {
         Path start = controlDir.toPath();
+        if (!Files.isDirectory(start))
+            return;
         FileVisitor<Path> fv = new SimpleFileVisitor<Path>() {
             @Override
             public FileVisitResult visitFile(Path file, BasicFileAttributes attrs) throws IOException {
@@ -371,6 +375,8 @@ public class PackageMojo extends AbstractMojo {
 
     private long writeCheckSumsAndComputeSize(Writer writer) throws IOException {
         Path start = stageDir.toPath();
+        if (!Files.isDirectory(start))
+            return 0L;
         LongAdder adder = new LongAdder();
         FileVisitor<Path> fv = new SimpleFileVisitor<Path>() {
             @Override

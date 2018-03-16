@@ -8,14 +8,20 @@ Plugin is platform-independent and does not require additional external tools.
 Requires java 8 and maven 3.3
 
 Plugin is available from central maven repository. To use it, simply add the following to a 
-`build/plugins` section of the pom file. 
+the pom file. 
 
 ```xml
-<plugin>
-    <groupId>io.solit.maven</groupId>
-    <artifactId>deb-maven-plugin</artifactId>
-    <version>0.5</version>
-</plugin>
+<packaging>deb</packaging>
+<build>
+    <plugins>
+        <plugin>
+             <groupId>io.solit.maven</groupId>
+             <artifactId>deb-maven-plugin</artifactId>
+             <version>0.5</version>
+             <extensions>true</extensions>
+        </plugin>
+    </plugins>
+</build>
 ```
 
 ## Goals:
@@ -26,6 +32,15 @@ Plugin is available from central maven repository. To use it, simply add the fol
 * `package` - create a .deb file with control file
 
 ## Details:
+
+### `deb` packaging
+
+Projects with packaging `deb` will produce a regular jar file as usual, but then will additionaly 
+pack it into a deb file along with transitive compile and runtime dependencies, and generated content
+like changelogs and man pages. Source files by default are processed as follows (relative to project basedir):
+
+* `changelog.md` will be converted to a changelog
+* `src/deb/doc/**/*.md` will be converted to a man page
 
 ### `populate` goal
 

@@ -8,7 +8,11 @@ and this project adheres to [Semantic Versioning](http://semver.org/spec/v2.0.0.
 ### Added
 *   `man` goal to generate roff man pages from markdown
 *   `changelog` goal to generate changelog.gz from markdown
-
+*   plexus config for deb packaging
+### Fixed
+*   `package` goal fails if no control or stage directory present
+*   `package` goal fails with npe in case of hanging comma in 
+    a dependency list.
 
 ## [0.5] - 2018-02-20T01:00:00UTC+0500
 ### Added 
