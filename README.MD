@@ -8,24 +8,42 @@ Plugin is platform-independent and does not require additional external tools.
 Requires java 8 and maven 3.3
 
 Plugin is available from central maven repository. To use it, simply add the following to a 
-`build/plugins` section of the pom file. 
+the pom file. 
 
 ```xml
-<plugin>
-    <groupId>io.solit.maven</groupId>
-    <artifactId>deb-maven-plugin</artifactId>
-    <version>0.5</version>
-</plugin>
+<packaging>deb</packaging>
+<build>
+    <plugins>
+        <plugin>
+             <groupId>io.solit.maven</groupId>
+             <artifactId>deb-maven-plugin</artifactId>
+             <version>0.5</version>
+             <extensions>true</extensions>
+        </plugin>
+    </plugins>
+</build>
 ```
 
 ## Goals:
 * `pupulate` - transitively copy runtime dependencies to a specified directory
+* `data` - copy files to a staging and control directories
 * `copyright` - create a machine readable copyright file
 * `man` - compile a man pages from markdown source files
 * `changelog` - copy and/or convert changelog to debian format
 * `package` - create a .deb file with control file
 
 ## Details:
+
+### `deb` packaging
+
+Projects with packaging `deb` will produce a regular jar file as usual, but then will additionaly 
+pack it into a deb file along with transitive compile and runtime dependencies, and generated content
+like changelogs and man pages. Source files by default are processed as follows (relative to project basedir):
+
+*   `changelog.md` will be converted to a changelog
+*   `src/deb/doc/**/*.md` will be converted to a man page
+*   content of `src/deb/data` will be recursively copied to a package root
+*   content of `src/deb/control` will be recursively copied to a control section of a package
 
 ### `populate` goal
 
@@ -82,6 +100,31 @@ Full configuration:
         filtering: specifying only a version will exclude all artifacts of that version
     *   `pattern` - a regular expression to check artifact string (groupId:artifactId:version\[:classifier\])
         against
+
+### `data` goal
+
+Recursively copies files from a `dataSourceDir` to a `stageDir` and from `controlSourceDir` to `controlDir`.
+
+If source directory does not exist, nothing will be copied, and plugin will finish correctly
+
+Files are not overridden during this operation
+
+Symbolic links are copied as is, without following them.
+
+```xml
+    <configuration>
+        <dataSourceDir>${project.basedir}/src/deb/data</dataSourceDir>
+        <controlSourceDir>${project.basedir}/src/deb/control</controlSourceDir>
+        <stageDir>${project.build.directory}/deb</stageDir>
+	<controlDir>${project.build.directory}/control</controlDir>
+    </configuration>
+```
+
+*   `dataSourceDir` - source directory, containing files to be included into a deb package
+*   `controlSourceDir` - source directory, containing files to be inclued into a control section of a deb packages
+*   `stageDir` - stage directory, containing files to be included into a deb package
+*   `controlDir` - stage directory, containing files to be inclued into a control section of a deb packages
+
 
 ### `copyright` goal
 
@@ -202,7 +245,7 @@ Full configuration:
     *   `pattern` - a regular expression to check artifact string (groupId:artifactId:version\[:classifier\])
         against
     
-### Man goal
+### `man` goal
 
 Goal generates linux man pages from markdown source. Generation process is similar to one used by 
 [`ruby-ronn`][ronn] utility.
@@ -271,7 +314,7 @@ For further details on markdown processing see [man-markdown.md](man-markdown.md
 *   `stageDir` - stage directory, containing files to be included into a deb package
 *   `sourceEncoding` - encoding used to read source files
 
-### Changelog goal
+### `changelog` goal
 
 This goal creates and/or copies a changelog file as requested by debian policy
     
@@ -280,7 +323,8 @@ will be gzipped and copied into `changelogDestinationDirectory` as *changelog.gz
 
 If `convertToDebianChangelog` is set, plugin will try to parse `changelogSource` as
 markdown file written according to [keepachangelog.com][keep-a-changelog] recommendations and
-write a changelog in a debian format as *changelog.Debian.gz*
+write a changelog in a debian format as *changelog.gz* or as *changelog.Debian.gz* if
+`copyOriginalChangelog` is also set or current version has a revision part
 
 Details on conversion process can be found in [keepachangelog-markdown.md](keepachangelog-markdown.md)
 
@@ -288,7 +332,7 @@ Details on conversion process can be found in [keepachangelog-markdown.md](keepa
 <configuration>
     <copyOriginalChangelog>false</copyOriginalChangelog>
     <convertToDebianChangelog>true</convertToDebianChangelog>
-    <appendCurrentVersionChangeSet>false</appendCurrentVersionChangeSet>
+    <appendCurrentVersionChangeSet>true</appendCurrentVersionChangeSet>
     <version>${project.version}</version>
     <revision></revision>
     <changelogSource>${project.basedir}/changelog.md</changelogSource>
@@ -305,8 +349,10 @@ Details on conversion process can be found in [keepachangelog-markdown.md](keepa
 *   `copyOriginalChangelog` - Whether to copy a gzipped original changelog to a destination folder
 *   `convertToDebianChangelog` - Whether to try parsing changelog and converting it to a form
     specified by debian policy
-*   `appendCurrentVersionChangeSet` - if current version does not match latest version in a changelog, 
-    and this option is set to true, plugin will add a yanked change set to a generated changelog
+*   `appendCurrentVersionChangeSet` - if set to true, unreleased changes from a changelog file,
+    will be added to a converted changelog as curren version change set. If changelog contains no
+    unreleased changes and no changes for current version, yanked change set will be added to a
+    generated changelog
 *   `version` - upstream part of a current package version
 *   `revision` - revision part of a current  package version
 *   `changelogSource` - A source file for debian changelog
@@ -320,7 +366,7 @@ Details on conversion process can be found in [keepachangelog-markdown.md](keepa
 *   `targetDistribution` - A distribution to write to changelog
 *   `sourceEncoding` - Encoding used to read source file
 
-### Package goal
+### `package` goal
 
 Create deb package with files situated in a stage dir.
 
@@ -374,6 +420,8 @@ This goal:
                 <linkDestination></linkDestination>
             </symbolicLink>
         </symbolicLinks>
+        <autoDependencies>true</autoDependencies>
+        <autoPermissions>true</autoPermissions>
     </configuration>
 ```
 *   `maintainerScripts` - names of control files to treat as maintainer scripts
@@ -400,6 +448,10 @@ This goal:
     for every link:
     *   `name` - name of a link file
     *   `linkDestination` - name of a destination file (file man not exist)
+*   `autoDependencies` - if set to true, and `depends` field of `packageAttributes` is not specified
+    plugin will try to add dependencies automatically
+*   `autoPermissions` - if set to true, and `permissions` are not specified plugin will try automatically
+    mark files in */bin*, */sbin*, */usr/bin* and */usr/sbin* executable.
 
 [mr-copyright]: https://www.debian.org/doc/packaging-manuals/copyright-format/1.0/
 [ronn]: https://manpages.debian.org/stretch/ruby-ronn/ronn-format.7.en.html

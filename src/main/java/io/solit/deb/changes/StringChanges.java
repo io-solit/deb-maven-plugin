@@ -9,6 +9,7 @@ import java.util.Objects;
  * @since 13.03.18
  */
 public class StringChanges implements Changes {
+    public static final StringChanges YANKED = new StringChanges("yanked");
     private final String changes;
 
     public StringChanges(String changes) {

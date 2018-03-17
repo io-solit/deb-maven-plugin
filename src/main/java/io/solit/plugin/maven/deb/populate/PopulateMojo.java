@@ -10,6 +10,7 @@ import org.apache.maven.plugins.annotations.ResolutionScope;
 import java.io.File;
 import java.io.IOException;
 import java.nio.file.Files;
+import java.nio.file.Path;
 import java.nio.file.StandardCopyOption;
 
 /**
@@ -34,10 +35,11 @@ public class PopulateMojo extends AbstractDependencyMojo<Void> {
                     return;
                 else
                     throw new MojoExecutionException("Unresolved dependency: " + node.getArtifact().toString());
+            Path target = new File(dependencyDir, src.getName()).toPath();
+            if (Files.exists(target))
+                return;
             Files.copy(
-                    src.toPath(),
-                    new File(dependencyDir, src.getName()).toPath(),
-                    StandardCopyOption.COPY_ATTRIBUTES, StandardCopyOption.REPLACE_EXISTING
+                    src.toPath(), target, StandardCopyOption.COPY_ATTRIBUTES, StandardCopyOption.REPLACE_EXISTING
             );
         } catch (IOException e) {
             throw new MojoExecutionException("Unable to copy artifact " + node.getArtifact().toString(), e);

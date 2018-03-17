@@ -42,10 +42,12 @@ public class KeepChangelogParser {
     private static final Pattern MAINTAINER_PARSER = Pattern.compile(
             "(.*)[\\s<]+([a-zA-Z0-9_.+-]+@[a-zA-Z0-9.-]+)>?"
     );
+    public static final String UNRELEASED = "[Unreleased]";
     private final String packageName;
     private final String defaultMaintainer;
     private final String defaultMaintainerEmail;
     private String defaultDistribution;
+    private Version unreleasedVersion;
 
     public KeepChangelogParser(String packageName, String defaultMaintainer, String defaultMaintainerEmail) {
         this.packageName = Objects.requireNonNull(packageName, "Package name should be specified");
@@ -55,6 +57,10 @@ public class KeepChangelogParser {
 
     public void setDefaultDistribution(String defaultDistribution) {
         this.defaultDistribution = defaultDistribution;
+    }
+
+    public void setUnreleasedVersion(Version unreleasedVersion) {
+        this.unreleasedVersion = unreleasedVersion;
     }
 
     public Changelog parse(Reader changelogReader) throws IOException {
@@ -99,6 +105,8 @@ public class KeepChangelogParser {
             ZonedDateTime dateTime;
             dateTime = getZonedDateTime(matcher.group(2), matcher.group(3), matcher.group(4));
             return new ChangeAccumulator(version, dateTime, matcher.group(5) != null);
+        } else if (unreleasedVersion != null && UNRELEASED.equalsIgnoreCase(headingText)) {
+            return new ChangeAccumulator(unreleasedVersion, ZonedDateTime.now(), false);
         } else
             return null;
     }
@@ -134,7 +142,7 @@ public class KeepChangelogParser {
             if (!nodes.isEmpty())
                 changes = new MarkdownChanges(nodes);
             else if (yanked)
-                changes = new StringChanges("yanked");
+                changes = StringChanges.YANKED;
             else
                 return null;
             ChangeSet set = new ChangeSet(packageName, version, maintainer, maintainerEmail, changes);
