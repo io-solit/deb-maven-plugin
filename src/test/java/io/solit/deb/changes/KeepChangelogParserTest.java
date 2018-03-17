@@ -1,5 +1,6 @@
 package io.solit.deb.changes;
 
+import io.solit.deb.Version;
 import org.junit.jupiter.api.Test;
 
 import java.io.IOException;
@@ -41,6 +42,30 @@ public class KeepChangelogParserTest {
         assertEquals(null, s.getUrgencyCommentary());
         assertEquals(ZonedDateTime.of(2010, 10, 10, 0, 0, 0, 0, ZoneId.of("Z")), s.getDate());
         checkLines(s.getChanges(), "Some change description here");
+    }
+
+    @Test
+    public void testUnreleasedChangelog() throws IOException {
+        KeepChangelogParser parser = new KeepChangelogParser("foo", "bar", "baz@example.com");
+        parser.setDefaultDistribution("qux");
+        parser.setUnreleasedVersion(new Version("1.0.0"));
+        Changelog cl = parser.parse(new StringReader(String.join("\n",
+                "# Changelog",
+                "This changelog bla bla bla follows bla bla, adopted bla bla bla",
+                "## [Unreleased]",
+                " This change is still coming"
+        )));
+        assertEquals(1, cl.getChanges().size());
+        ChangeSet s = cl.getChanges().iterator().next();
+        assertEquals(ChangeSet.Urgency.medium, s.getUrgency());
+        assertEquals("foo", s.getPackageName());
+        assertEquals("1.0.0", s.getVersion().getValidatedString());
+        assertEquals("bar", s.getMaintainer());
+        assertEquals("baz@example.com", s.getMaintainerEmail());
+        assertEquals("qux", s.getDistribution());
+        assertEquals(null, s.getUrgencyCommentary());
+        assertNotNull(s.getDate());
+        checkLines(s.getChanges(), "This change is still coming");
     }
 
     @Test

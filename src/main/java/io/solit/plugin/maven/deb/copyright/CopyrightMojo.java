@@ -155,6 +155,8 @@ public class CopyrightMojo extends AbstractDependencyMojo<Copyright> {
                 for (String s : new String[]{"usr", "share", "doc", packageName, "copyright"})
                     copyrightFile = new File(copyrightFile, s);
             }
+            if (copyrightFile.exists())
+                return;
             Copyright copyright = createCopyright();
             fillCopyright(copyright);
             addLicences(copyright);

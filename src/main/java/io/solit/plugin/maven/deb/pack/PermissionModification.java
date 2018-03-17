@@ -21,13 +21,21 @@ import java.util.stream.Collectors;
 public class PermissionModification {
     private static final Path ROOT = Paths.get(File.separator);
     private static final int TYPE_MASK = 0xf000;
-    private Pattern PERMISSIONS_PATTERN = Pattern.compile("[0-7]{3}");
+    private static final Pattern PERMISSIONS_PATTERN = Pattern.compile("[0-7]{3}");
 
     private String permissions;
 
     private Set<String> include;
 
     private Set<String> exclude;
+
+    public PermissionModification() {}
+
+    public PermissionModification(String permissions, Set<String> include, Set<String> exclude) {
+        this.permissions = permissions;
+        this.include = new HashSet<>(include);
+        this.exclude = new HashSet<>(exclude);
+    }
 
     public String getPermissions() {
         return permissions;

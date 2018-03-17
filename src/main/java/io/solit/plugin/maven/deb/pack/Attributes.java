@@ -17,7 +17,7 @@ public class Attributes {
     private String source;
     private Boolean essential;
     private String builtUsing;
-    private Set<String> depends = new HashSet<>();
+    private Set<String> depends;
     private Set<String> preDepends = new HashSet<>();
     private Set<String> recommends = new HashSet<>();
     private Set<String> suggests = new HashSet<>();
@@ -104,7 +104,8 @@ public class Attributes {
         control.setSource(source);
         control.setEssential(essential);
         control.setBuildUsing(builtUsing);
-        depends.stream().filter(Objects::nonNull).map(String::trim).forEach(control::addDepends);
+        if (depends != null)
+            depends.stream().filter(Objects::nonNull).map(String::trim).forEach(control::addDepends);
         preDepends.stream().filter(Objects::nonNull).map(String::trim).forEach(control::addPreDepends);
         recommends.stream().filter(Objects::nonNull).map(String::trim).forEach(control::addRecommends);
         suggests.stream().filter(Objects::nonNull).map(String::trim).forEach(control::addSuggests);

@@ -34,6 +34,14 @@ changes. Yanked change set header should end with `[YANKED]` mark, like so:
 ## [4.1.1.162-3] - 2018-01-23 [YANKED]
 ```
 
+If current version changeset is required parser will create change set for unreleased changes found under 
+the following level two header.
+```
+## [Unreleased]
+```
+Current zoned date time will and current version will be used for created change set, and content will be processed
+as usual.
+
 ## Change set details
 
 By default for every change set package name, distribution and maintainer contacts are taken from goal configuration,

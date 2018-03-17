@@ -203,48 +203,20 @@ public class ManMojo extends AbstractMojo {
                     warningHandler = w -> { throw new ManParseException(w); };
                 else
                     warningHandler = w -> getLog().warn("File '" + file.toString() + "': " + w);
-                ManPage page;
-                try (
-                        InputStream is = new FileInputStream(file.toFile());
-                        Reader input = new InputStreamReader(is, charset)
-                ) {
-                    if (deduceManTitle) {
-                        String title;
-                        int section;
-                        String description;
-                        Matcher fn = MAN_FILE_PATTERN.matcher(file.getFileName().toString());
-                        if (fn.matches()) {
-                            title = fn.group(1);
-                            section = Integer.parseInt(fn.group(2));
-                        } else {
-                            title = file.getFileName().toString();
-                            title = title.substring(0, title.length() - 3); // removing ".md" extension
-                            if (parent != null) {
-                                Matcher pd = MAN_DIRECTORY_PATTERN.matcher(parent.getFileName().toString());
-                                if (pd.matches())
-                                    section = Integer.parseInt(pd.group(1));
-                                else
-                                    section = 1;
-                            } else
-                                section = 1;
-                        }
-                        description = createDefaultDescription(title, section);
-                        page = parser.parse(input, warningHandler, title, section, description);
-                    } else
-                        page = parser.parse(input, warningHandler);
-                    validateManPage(page, warningHandler);
-                } catch (ManParseException e) {
-                    throw new IOException("Markdown processing error: File: '" + file.toString() + "': " + e.getMessage(), e);
-                }
+                ManPage page = readManPage(file, parent, warningHandler);
+                validateManPage(page, warningHandler);
                 if (parent == null)
                     parent = Paths.get("man" + page.getManSection());
                 parent = destination.resolve(parent);
                 String destinationName = page.getName() + "." + page.getManSection() + ".gz";
+                Path manFile = parent.resolve(destinationName);
+                if (Files.exists(manFile))
+                    return FileVisitResult.CONTINUE;
                 Files.createDirectories(parent);
                 GzipParameters parameters = new GzipParameters();
                 parameters.setCompressionLevel(Deflater.BEST_COMPRESSION);
                 try(
-                        OutputStream os = new FileOutputStream(parent.resolve(destinationName).toFile());
+                        OutputStream os = new FileOutputStream(manFile.toFile());
                         OutputStream gz = new GzipCompressorOutputStream(os, parameters);
                         Writer wr = new OutputStreamWriter(gz, StandardCharsets.UTF_8)
                 ) {
@@ -252,6 +224,42 @@ public class ManMojo extends AbstractMojo {
                 }
             }
             return FileVisitResult.CONTINUE;
+        }
+
+        private ManPage readManPage(Path file, Path parent, Consumer<String> warningHandler) throws IOException {
+            ManPage page;
+            try (
+                    InputStream is = new FileInputStream(file.toFile());
+                    Reader input = new InputStreamReader(is, charset)
+            ) {
+                if (deduceManTitle) {
+                    String title;
+                    int section;
+                    String description;
+                    Matcher fn = MAN_FILE_PATTERN.matcher(file.getFileName().toString());
+                    if (fn.matches()) {
+                        title = fn.group(1);
+                        section = Integer.parseInt(fn.group(2));
+                    } else {
+                        title = file.getFileName().toString();
+                        title = title.substring(0, title.length() - 3); // removing ".md" extension
+                        if (parent != null) {
+                            Matcher pd = MAN_DIRECTORY_PATTERN.matcher(parent.getFileName().toString());
+                            if (pd.matches())
+                                section = Integer.parseInt(pd.group(1));
+                            else
+                                section = 1;
+                        } else
+                            section = 1;
+                    }
+                    description = createDefaultDescription(title, section);
+                    page = parser.parse(input, warningHandler, title, section, description);
+                } else
+                    page = parser.parse(input, warningHandler);
+            } catch (ManParseException e) {
+                throw new IOException("Markdown processing error: File: '" + file.toString() + "': " + e.getMessage(), e);
+            }
+            return page;
         }
 
         private String createDefaultDescription(String title, int section) {
