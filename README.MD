@@ -17,7 +17,7 @@ the pom file.
         <plugin>
              <groupId>io.solit.maven</groupId>
              <artifactId>deb-maven-plugin</artifactId>
-             <version>0.5</version>
+             <version>1.0-RC1</version>
              <extensions>true</extensions>
         </plugin>
     </plugins>
