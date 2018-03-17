@@ -299,9 +299,9 @@ public class PackageMojo extends AbstractMojo {
 
     private Control createControl() {
         String version = this.version, revision = this.revision;
-        if (revision == null && version.endsWith(SNAPSHOT)) {
+        if (version.endsWith(SNAPSHOT)) {
             version = version.substring(0, version.length() - SNAPSHOT.length());
-            revision = "b" + LocalDateTime.now().format(DateTimeFormatter.ofPattern("yyyyMMddHHmmss"));
+            version += "+b" + LocalDateTime.now().format(DateTimeFormatter.ofPattern("yyyyMMddHHmmss"));
         }
         String maintainer = this.maintainer;
         if (maintainer == null)

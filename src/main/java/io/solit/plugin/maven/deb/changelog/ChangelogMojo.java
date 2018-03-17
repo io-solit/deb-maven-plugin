@@ -234,9 +234,9 @@ public class ChangelogMojo extends AbstractMojo {
         if (!appendCurrentVersionChangeSet)
             return null;
         String version = this.version, revision = this.revision;
-        if (revision == null && version.endsWith(SNAPSHOT)) {
+        if (version.endsWith(SNAPSHOT)) {
             version = version.substring(0, version.length() - SNAPSHOT.length());
-            revision = "b" + LocalDateTime.now().format(DateTimeFormatter.ofPattern("yyyyMMddHHmmss"));
+            version += "+b" + LocalDateTime.now().format(DateTimeFormatter.ofPattern("yyyyMMddHHmmss"));
         }
         return new Version(version, revision);
     }
