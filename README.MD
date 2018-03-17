@@ -1,18 +1,49 @@
-# Maven Debian Plugin
+# Deb Maven Plugin
 
-Maven plugin create .deb packages, creating control file, copyright file
+Maven plugin for creating .deb packages, creating control file, copyright file
 and transitively copying runtime dependencies.
 
 Plugin is platform-independent and does not require additional external tools.
 
 Requires java 8 and maven 3.3
 
+Plugin is available from central maven repository. To use it, simply add the following to a 
+the pom file. 
+
+```xml
+<packaging>deb</packaging>
+<build>
+    <plugins>
+        <plugin>
+             <groupId>io.solit.maven</groupId>
+             <artifactId>deb-maven-plugin</artifactId>
+             <version>0.5</version>
+             <extensions>true</extensions>
+        </plugin>
+    </plugins>
+</build>
+```
+
 ## Goals:
 * `pupulate` - transitively copy runtime dependencies to a specified directory
+* `data` - copy files to a staging and control directories
 * `copyright` - create a machine readable copyright file
+* `man` - compile a man pages from markdown source files
+* `changelog` - copy and/or convert changelog to debian format
 * `package` - create a .deb file with control file
 
 ## Details:
+
+### `deb` packaging
+
+Projects with packaging `deb` will produce a regular jar file as usual, but then will additionaly 
+pack it into a deb file along with transitive compile and runtime dependencies, and generated content
+like changelogs and man pages. Source files by default are processed as follows (relative to project basedir):
+
+*   `changelog.md` will be converted to a changelog
+*   `src/deb/doc/**/*.md` will be converted to a man page
+*   content of `src/deb/data` will be recursively copied to a package root
+*   content of `src/deb/control` will be recursively copied to a control section of a package
 
 ### `populate` goal
 
@@ -70,10 +101,35 @@ Full configuration:
     *   `pattern` - a regular expression to check artifact string (groupId:artifactId:version\[:classifier\])
         against
 
+### `data` goal
+
+Recursively copies files from a `dataSourceDir` to a `stageDir` and from `controlSourceDir` to `controlDir`.
+
+If source directory does not exist, nothing will be copied, and plugin will finish correctly
+
+Files are not overridden during this operation
+
+Symbolic links are copied as is, without following them.
+
+```xml
+    <configuration>
+        <dataSourceDir>${project.basedir}/src/deb/data</dataSourceDir>
+        <controlSourceDir>${project.basedir}/src/deb/control</controlSourceDir>
+        <stageDir>${project.build.directory}/deb</stageDir>
+	<controlDir>${project.build.directory}/control</controlDir>
+    </configuration>
+```
+
+*   `dataSourceDir` - source directory, containing files to be included into a deb package
+*   `controlSourceDir` - source directory, containing files to be inclued into a control section of a deb packages
+*   `stageDir` - stage directory, containing files to be included into a deb package
+*   `controlDir` - stage directory, containing files to be inclued into a control section of a deb packages
+
+
 ### `copyright` goal
 
 Creates a machine-readable copyright file according to
-[specification](https://www.debian.org/doc/packaging-manuals/copyright-format/1.0/). May include copyright for
+[specification][mr-copyright]. May include copyright for
 dependencies copied into a package
 
 Copyright information may be specified in a configuration or extracted from a pom file if no
@@ -188,8 +244,129 @@ Full configuration:
         filtering: specifying only a version will exclude all artifacts of that version
     *   `pattern` - a regular expression to check artifact string (groupId:artifactId:version\[:classifier\])
         against
+    
+### `man` goal
 
-### Package goal
+Goal generates linux man pages from markdown source. Generation process is similar to one used by 
+[`ruby-ronn`][ronn] utility.
+
+Goal processes every file in source directory with `.md` extension (case-insensitive), and converts it to a 
+man page.
+Files with other extensions are silently ignored.
+
+Each processed file must contain a level one header specifying man title, section and short description used 
+by man-db to
+generate apropos database. File content before header which follows this format will be ignored
+
+For instance, the following code will create man page with title `foo` in section `5` with short description 
+`bar baz qux`
+
+```
+# foo(5) - bar baz qux
+======================
+```
+
+Other headers in file will be turned to a sections of man file, if header of level one or two, and to a 
+subheader for other levels.
+
+Generation supports, lists (including nested ones), definition lists, code blocks, quotes, emphasis and 
+other markdown feature described in
+[commonmark][comonmark] markdown specification.
+
+For further details on markdown processing see [man-markdown.md](man-markdown.md)
+
+```xml
+<configuration>
+    <manSourceDirectory>${project.basedir}/src/deb/doc</manSourceDirectory>
+    <manDestinationDirectory></manDestinationDirectory>
+    <deduceManTitle>true</deduceManTitle>
+    <strictManParsing>false</strictManParsing>
+    <manSource></manSource>
+    <manName></manName>
+    <packageName>${project.artifactId}</packageName>
+    <stageDir>${project.build.directory}/deb</stageDir>
+    <sourceEncoding>${project.build.sourceEncoding}</sourceEncoding>
+</configuration>
+```
+*   `manSourceDirectory` - directory to read markdown files for man page generation.  
+    Only files with `.md` (case-insensitive) will be processed.  
+    Subdirectory structure will be preserved, with exception for `.md` files in directory itself. Such files
+    will be placed to a directory named `man[sectionNumber]`  
+    Defaults to `${project.basedir}/src/deb/doc`
+*   `manDestinationDirectory` - Directory to write generated man pages to.  
+    Subdirectory structure of source directory will be preserved, with exception for `.md` files in directory
+    itself. Such files will be placed to a directory named `man[sectionNumber]`  
+    If not specified `<stageDir>/usr/share/man` will be used.
+*   `deduceManTitle` - Whether to try to create man title and description, if no proper heading found inside 
+    markdown file.  
+    Title will be deduced the following way:
+    -   if file name matches `title.[number].md` pattern, then <code>title</code> is used as man title,
+        and `[number]` as man section
+    -   else if file is in directory `man[number]`, than file name (without extension) is used as man title and,
+        `[number]` as man section
+    -   otherwise file name (without extension) is used as title and section is assumed to be `1`
+    
+    For short description required by man page specification combination of title and section name will be used
+*   `strictManParsing` - Treat parser and validation warnings as failures and abort generation.
+*   `manSource` - manual sources specified in a manual header. Package name will be used by default.
+*   `manName` - manual name specified in a manual header.
+*   `packageName` - name of debian package
+*   `stageDir` - stage directory, containing files to be included into a deb package
+*   `sourceEncoding` - encoding used to read source files
+
+### `changelog` goal
+
+This goal creates and/or copies a changelog file as requested by debian policy
+    
+If `copyOriginalChangelog` is set to `true`, `upstreamChangelogSource` file
+will be gzipped and copied into `changelogDestinationDirectory` as *changelog.gz*
+
+If `convertToDebianChangelog` is set, plugin will try to parse `changelogSource` as
+markdown file written according to [keepachangelog.com][keep-a-changelog] recommendations and
+write a changelog in a debian format as *changelog.gz* or as *changelog.Debian.gz* if
+`copyOriginalChangelog` is also set or current version has a revision part
+
+Details on conversion process can be found in [keepachangelog-markdown.md](keepachangelog-markdown.md)
+
+```xml
+<configuration>
+    <copyOriginalChangelog>false</copyOriginalChangelog>
+    <convertToDebianChangelog>true</convertToDebianChangelog>
+    <appendCurrentVersionChangeSet>true</appendCurrentVersionChangeSet>
+    <version>${project.version}</version>
+    <revision></revision>
+    <changelogSource>${project.basedir}/changelog.md</changelogSource>
+    <upstreamChangelogSource>${project.basedir}/changelog.md</upstreamChangelogSource>
+    <changelogDestinationDirectory></changelogDestinationDirectory>
+    <stageDir>${project.build.directory}/deb</stageDir>
+    <packageName>${project.artifactId}</packageName>
+    <maintainer>${project.developers[0].name}</maintainer>
+    <maintainerEmail>${project.developers[0].email}</maintainerEmail>
+    <targetDistribution>stable</targetDistribution>
+    <sourceEncoding>${project.build.sourceEncoding}</sourceEncoding>
+</configuration>
+```
+*   `copyOriginalChangelog` - Whether to copy a gzipped original changelog to a destination folder
+*   `convertToDebianChangelog` - Whether to try parsing changelog and converting it to a form
+    specified by debian policy
+*   `appendCurrentVersionChangeSet` - if set to true, unreleased changes from a changelog file,
+    will be added to a converted changelog as curren version change set. If changelog contains no
+    unreleased changes and no changes for current version, yanked change set will be added to a
+    generated changelog
+*   `version` - upstream part of a current package version
+*   `revision` - revision part of a current  package version
+*   `changelogSource` - A source file for debian changelog
+*   `upstreamChangelogSource` - A source file for upstream changelog
+*   `changelogDestinationDirectory` - Directory to write changelog to. If not specified
+    `<stageDir>/usr/share/doc/<packageName>` will be used
+*   `stageDir` - Stage directory, containing files to be included into a deb package
+*   `packageName` - Name of debian package
+*   `maintainer` - Package maintainer's name
+*   `maintainerEmail` - Package maintainer's email address
+*   `targetDistribution` - A distribution to write to changelog
+*   `sourceEncoding` - Encoding used to read source file
+
+### `package` goal
 
 Create deb package with files situated in a stage dir.
 
@@ -243,6 +420,8 @@ This goal:
                 <linkDestination></linkDestination>
             </symbolicLink>
         </symbolicLinks>
+        <autoDependencies>true</autoDependencies>
+        <autoPermissions>true</autoPermissions>
     </configuration>
 ```
 *   `maintainerScripts` - names of control files to treat as maintainer scripts
@@ -269,3 +448,12 @@ This goal:
     for every link:
     *   `name` - name of a link file
     *   `linkDestination` - name of a destination file (file man not exist)
+*   `autoDependencies` - if set to true, and `depends` field of `packageAttributes` is not specified
+    plugin will try to add dependencies automatically
+*   `autoPermissions` - if set to true, and `permissions` are not specified plugin will try automatically
+    mark files in */bin*, */sbin*, */usr/bin* and */usr/sbin* executable.
+
+[mr-copyright]: https://www.debian.org/doc/packaging-manuals/copyright-format/1.0/
+[ronn]: https://manpages.debian.org/stretch/ruby-ronn/ronn-format.7.en.html
+[comonmark]: https://spec.commonmark.org/0.28/
+[keep-a-changelog]: https://keepachangelog.com/en/1.0.0/

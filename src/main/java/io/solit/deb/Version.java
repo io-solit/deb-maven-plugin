@@ -1,5 +1,6 @@
 package io.solit.deb;
 
+import java.util.Objects;
 import java.util.regex.Pattern;
 
 /**
@@ -108,5 +109,20 @@ public class Version {
                     );
             }
         }
+    }
+
+    @Override
+    public boolean equals(Object o) {
+        if (this == o) return true;
+        if (!(o instanceof Version)) return false;
+        Version version = (Version) o;
+        return Objects.equals(epoch, version.epoch) &&
+                Objects.equals(upstream, version.upstream) &&
+                Objects.equals(revision, version.revision);
+    }
+
+    @Override
+    public int hashCode() {
+        return Objects.hash(epoch, upstream, revision);
     }
 }

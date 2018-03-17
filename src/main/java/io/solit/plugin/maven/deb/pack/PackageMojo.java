@@ -6,8 +6,6 @@ import io.solit.deb.Version;
 import org.apache.commons.compress.archivers.tar.TarArchiveEntry;
 import org.apache.commons.compress.archivers.tar.TarArchiveOutputStream;
 import org.apache.commons.compress.archivers.tar.TarConstants;
-import org.apache.commons.compress.utils.Charsets;
-import org.apache.commons.compress.utils.IOUtils;
 import org.apache.maven.plugin.AbstractMojo;
 import org.apache.maven.plugin.MojoExecutionException;
 import org.apache.maven.plugin.MojoFailureException;
@@ -21,6 +19,7 @@ import java.io.FileInputStream;
 import java.io.IOException;
 import java.io.OutputStreamWriter;
 import java.io.Writer;
+import java.nio.charset.StandardCharsets;
 import java.nio.file.FileVisitOption;
 import java.nio.file.FileVisitResult;
 import java.nio.file.FileVisitor;
@@ -35,6 +34,7 @@ import java.time.LocalDateTime;
 import java.time.format.DateTimeFormatter;
 import java.util.ArrayList;
 import java.util.Arrays;
+import java.util.Collections;
 import java.util.EnumSet;
 import java.util.HashSet;
 import java.util.List;
@@ -195,6 +195,22 @@ public class PackageMojo extends AbstractMojo {
     @Parameter
     private List<Link> symbolicLinks;
 
+    /**
+     * If set to true, and <code>depends</code> field of <code>packageAttributes</code> is not specified
+     * plugin will try to add dependencies automatically.
+     */
+    @Parameter
+    private boolean autoDependencies = true;
+
+    /**
+     * If set to true, and <code>permissions</code> are not specified
+     * plugin will try automatically mark files in <code>/bin</code>
+     * <code>/sbin</code> <code>/usr/bin</code> and <code>/usr/sbin</code>
+     * executable.
+     */
+    @Parameter
+    private boolean autoPermissions = true;
+
     private List<PermissionModification> getPermissions() {
         if (permissions == null)
             permissions = new ArrayList<>();
@@ -211,8 +227,18 @@ public class PackageMojo extends AbstractMojo {
 
     private void copyDataFiles(TarArchiveOutputStream dataArchive) throws IOException {
         Path start = stageDir.toPath();
-        List<PermissionModification.CompiledPermissions> permissions = this.getPermissions().stream()
-                .map(PermissionModification::compile).collect(Collectors.toList());
+        if (!Files.isDirectory(start))
+            return;
+        List<PermissionModification.CompiledPermissions> permissions;
+        if (this.permissions != null)
+            permissions = this.permissions.stream()
+                    .map(PermissionModification::compile).collect(Collectors.toList());
+        else if (autoPermissions)
+            permissions = Collections.singletonList(new PermissionModification("755", new HashSet<>(Arrays.asList(
+                    "/bin/*", "/sbin/*", "/usr/bin/*", "/usr/sbin/*"
+            )), Collections.emptySet()).compile());
+        else
+            permissions = Collections.emptyList();
         FileVisitor<Path> fv = new SimpleFileVisitor<Path>() {
 
             @Override
@@ -245,7 +271,7 @@ public class PackageMojo extends AbstractMojo {
                     if (p.apply(entry, relative))
                         break;
                 dataArchive.putArchiveEntry(entry);
-                IOUtils.copy(new FileInputStream(file.toFile()), dataArchive);
+                Files.copy(file, dataArchive);
                 dataArchive.closeArchiveEntry();
                 return FileVisitResult.CONTINUE;
             }
@@ -273,9 +299,9 @@ public class PackageMojo extends AbstractMojo {
 
     private Control createControl() {
         String version = this.version, revision = this.revision;
-        if (revision == null && version.endsWith(SNAPSHOT)) {
+        if (version.endsWith(SNAPSHOT)) {
             version = version.substring(0, version.length() - SNAPSHOT.length());
-            revision = "b" + LocalDateTime.now().format(DateTimeFormatter.ofPattern("yyyyMMddHHmmss"));
+            version += "+b" + LocalDateTime.now().format(DateTimeFormatter.ofPattern("yyyyMMddHHmmss"));
         }
         String maintainer = this.maintainer;
         if (maintainer == null)
@@ -286,9 +312,15 @@ public class PackageMojo extends AbstractMojo {
         control.setDescription(processDescription());
         if (packageAttributes != null)
             packageAttributes.fillControl(control);
+        if (autoDependencies && packageAttributes == null || packageAttributes.getDepends() == null)
+            fillAutoDependencies(control);
         if (homepage != null)
             control.setHomepage(homepage);
         return control;
+    }
+
+    private void fillAutoDependencies(Control control) {
+        control.addDepends("default-jre");
     }
 
     private String processDescription() {
@@ -325,9 +357,33 @@ public class PackageMojo extends AbstractMojo {
 
     private void copyControlFiles(TarArchiveOutputStream controlArchive) throws IOException {
         Path start = controlDir.toPath();
+        if (!Files.isDirectory(start))
+            return;
         FileVisitor<Path> fv = new SimpleFileVisitor<Path>() {
+
+            @Override
+            public FileVisitResult preVisitDirectory(Path dir, BasicFileAttributes attrs) throws IOException {
+                if (Files.isSameFile(dir, start))
+                    return FileVisitResult.CONTINUE;
+                Path relative = start.relativize(dir);
+                TarArchiveEntry entry = new TarArchiveEntry(relative.toString() + "/", TarConstants.LF_DIR);
+                entry.setIds(0, 0);
+                entry.setModTime(TarArchiveEntry.DEFAULT_DIR_MODE);
+                entry.setSize(0);
+                entry.setModTime(attrs.lastModifiedTime().toMillis());
+                controlArchive.putArchiveEntry(entry);
+                controlArchive.closeArchiveEntry();
+                return FileVisitResult.CONTINUE;
+            }
+
             @Override
             public FileVisitResult visitFile(Path file, BasicFileAttributes attrs) throws IOException {
+                switch (file.getFileName().toString()) {
+                    case "control":
+                    case "md5sums":
+                        getLog().warn("Staged control file will be overridden " + file);
+                        return FileVisitResult.CONTINUE;
+                }
                 TarArchiveEntry entry = createTarEntry(start.relativize(file).toString());
                 entry.setSize(attrs.size());
                 if (maintainerScripts.contains(entry.getName()))
@@ -335,7 +391,7 @@ public class PackageMojo extends AbstractMojo {
                     entry.setMode(0100755);
                 entry.setModTime(attrs.lastModifiedTime().toMillis());
                 controlArchive.putArchiveEntry(entry);
-                IOUtils.copy(new FileInputStream(file.toFile()), controlArchive);
+                Files.copy(file, controlArchive);
                 controlArchive.closeArchiveEntry();
                 return FileVisitResult.CONTINUE;
             }
@@ -346,7 +402,7 @@ public class PackageMojo extends AbstractMojo {
     private void writeControl(TarArchiveOutputStream controlArchive, Control control) throws IOException {
         TarArchiveEntry entry = createTarEntry("control");
         ByteArrayOutputStream buffer = new ByteArrayOutputStream();
-        try (Writer wr = new OutputStreamWriter(buffer, Charsets.UTF_8)) {
+        try (Writer wr = new OutputStreamWriter(buffer, StandardCharsets.UTF_8)) {
             control.writeControlFile(wr);
         }
         entry.setSize(buffer.size());
@@ -359,7 +415,7 @@ public class PackageMojo extends AbstractMojo {
         long size;
         TarArchiveEntry entry = createTarEntry("md5sums");
         ByteArrayOutputStream buffer = new ByteArrayOutputStream();
-        try (Writer wr = new OutputStreamWriter(buffer, Charsets.UTF_8)) {
+        try (Writer wr = new OutputStreamWriter(buffer, StandardCharsets.UTF_8)) {
             size = writeCheckSumsAndComputeSize(wr);
         }
         entry.setSize(buffer.size());
@@ -371,6 +427,8 @@ public class PackageMojo extends AbstractMojo {
 
     private long writeCheckSumsAndComputeSize(Writer writer) throws IOException {
         Path start = stageDir.toPath();
+        if (!Files.isDirectory(start))
+            return 0L;
         LongAdder adder = new LongAdder();
         FileVisitor<Path> fv = new SimpleFileVisitor<Path>() {
             @Override

@@ -1,7 +1,6 @@
 package io.solit.deb;
 
 import org.apache.commons.compress.archivers.tar.TarArchiveOutputStream;
-import org.apache.commons.compress.utils.Charsets;
 
 import java.io.ByteArrayOutputStream;
 import java.io.File;
@@ -11,6 +10,7 @@ import java.io.OutputStreamWriter;
 import java.io.RandomAccessFile;
 import java.io.Writer;
 import java.nio.charset.Charset;
+import java.nio.charset.StandardCharsets;
 import java.time.Instant;
 import java.util.zip.GZIPOutputStream;
 
@@ -25,7 +25,7 @@ public class DebFileWriter implements AutoCloseable {
     private static final int HEADER_LENGTH = 60, FILENAME_LENGTH = 16, MOD_TIME_LENGTH = 12;
     private static final long SIZE_OFFSET = 48;
     private static final String OWNER_ID = "0     ", GROUP_ID = "0     ", FILE_MODE = "100644  ", SIZE_PLACEHOLDER = "          ";
-    private static final Charset CHARSET = Charsets.ISO_8859_1;
+    private static final Charset CHARSET = StandardCharsets.ISO_8859_1;
     private final RandomAccessFile _randomAccessFile;
     private int _stage;
 
@@ -42,7 +42,7 @@ public class DebFileWriter implements AutoCloseable {
             throw new IOException("Control stream was previously open");
         TarArchiveOutputStream control = new TarArchiveOutputStream(
                 new GZIPOutputStream(new DebOutputStream("control", "control.tar.gz")),
-                Charsets.UTF_8.name()
+                StandardCharsets.UTF_8.name()
         );
         control.setLongFileMode(TarArchiveOutputStream.LONGFILE_GNU);
         return control;
@@ -53,7 +53,7 @@ public class DebFileWriter implements AutoCloseable {
             throw new IOException("Data stream was previously open");
         TarArchiveOutputStream data = new TarArchiveOutputStream(
                 new GZIPOutputStream(new DebOutputStream("data", "data.tar.gz")),
-                Charsets.UTF_8.name()
+                StandardCharsets.UTF_8.name()
         );
         data.setLongFileMode(TarArchiveOutputStream.LONGFILE_GNU);
         return data;

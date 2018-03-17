@@ -3,7 +3,6 @@ package io.solit.plugin.maven.deb.copyright;
 import io.solit.deb.copyright.Copyright;
 import io.solit.deb.copyright.CopyrightFiles;
 import io.solit.plugin.maven.deb.dependencies.AbstractDependencyMojo;
-import org.apache.commons.compress.utils.Charsets;
 import org.apache.maven.model.Contributor;
 import org.apache.maven.model.License;
 import org.apache.maven.model.Organization;
@@ -18,6 +17,7 @@ import java.io.File;
 import java.io.FileOutputStream;
 import java.io.IOException;
 import java.io.OutputStreamWriter;
+import java.nio.charset.StandardCharsets;
 import java.nio.file.Path;
 import java.time.Year;
 import java.util.Collections;
@@ -155,6 +155,8 @@ public class CopyrightMojo extends AbstractDependencyMojo<Copyright> {
                 for (String s : new String[]{"usr", "share", "doc", packageName, "copyright"})
                     copyrightFile = new File(copyrightFile, s);
             }
+            if (copyrightFile.exists())
+                return;
             Copyright copyright = createCopyright();
             fillCopyright(copyright);
             addLicences(copyright);
@@ -162,7 +164,7 @@ public class CopyrightMojo extends AbstractDependencyMojo<Copyright> {
                 traverseDependencies(copyright);
             if (!copyrightFile.getParentFile().isDirectory() && !copyrightFile.getParentFile().mkdirs())
                 throw new IOException("Unable to create directories " + copyrightFile.getParentFile());
-            try(OutputStreamWriter writer = new OutputStreamWriter(new FileOutputStream(copyrightFile), Charsets.UTF_8)) {
+            try(OutputStreamWriter writer = new OutputStreamWriter(new FileOutputStream(copyrightFile), StandardCharsets.UTF_8)) {
                 copyright.writeCopyright(writer);
             }
         } catch (IOException e) {
@@ -254,9 +256,9 @@ public class CopyrightMojo extends AbstractDependencyMojo<Copyright> {
     private String getProjectCopyright(MavenProject project) {
         String prefix;
         if (project.getInceptionYear() != null)
-            prefix = "© " + project.getInceptionYear() + "-" + Year.now().getValue() + " ";
+            prefix = "\u00a9 " + project.getInceptionYear() + "-" + Year.now().getValue() + " ";
         else
-            prefix = "© " + Year.now().getValue() + " ";
+            prefix = "\u00a9 " + Year.now().getValue() + " ";
         String cpr = Optional.of(project).map(MavenProject::getOrganization)
                     .map(Organization::getName)
                     .map(prefix::concat)
