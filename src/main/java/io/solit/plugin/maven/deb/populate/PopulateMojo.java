@@ -35,6 +35,8 @@ public class PopulateMojo extends AbstractDependencyMojo<Void> {
                     return;
                 else
                     throw new MojoExecutionException("Unresolved dependency: " + node.getArtifact().toString());
+            if (!dependencyDir.isDirectory() && !dependencyDir.mkdirs())
+                throw new MojoExecutionException("Unable to create directory " + dependencyDir.toString());
             Path target = new File(dependencyDir, src.getName()).toPath();
             if (Files.exists(target))
                 return;
@@ -48,9 +50,6 @@ public class PopulateMojo extends AbstractDependencyMojo<Void> {
 
     @Override
     public void execute() throws MojoExecutionException, MojoFailureException {
-        File dependencyDir = getDependencyDirectory();
-        if (!dependencyDir.isDirectory() && !dependencyDir.mkdirs())
-            throw new MojoExecutionException("Unable to create directory " + dependencyDir.toString());
         traverseDependencies(null);
     }
 
