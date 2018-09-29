@@ -31,6 +31,9 @@ import java.security.DigestInputStream;
 import java.security.MessageDigest;
 import java.security.NoSuchAlgorithmException;
 import java.time.LocalDateTime;
+import java.time.ZoneId;
+import java.time.ZoneOffset;
+import java.time.ZonedDateTime;
 import java.time.format.DateTimeFormatter;
 import java.util.ArrayList;
 import java.util.Arrays;
@@ -301,7 +304,7 @@ public class PackageMojo extends AbstractMojo {
         String version = this.version, revision = this.revision;
         if (version.endsWith(SNAPSHOT)) {
             version = version.substring(0, version.length() - SNAPSHOT.length());
-            version += "+b" + LocalDateTime.now().format(DateTimeFormatter.ofPattern("yyyyMMddHHmmss"));
+            version += "+b" + ZonedDateTime.now(ZoneOffset.UTC).format(DateTimeFormatter.ofPattern("yyyyMMddHHmmss"));
         }
         String maintainer = this.maintainer;
         if (maintainer == null)
@@ -312,7 +315,7 @@ public class PackageMojo extends AbstractMojo {
         control.setDescription(processDescription());
         if (packageAttributes != null)
             packageAttributes.fillControl(control);
-        if (autoDependencies && packageAttributes == null || packageAttributes.getDepends() == null)
+        if (autoDependencies && (packageAttributes == null || packageAttributes.getDepends() == null))
             fillAutoDependencies(control);
         if (homepage != null)
             control.setHomepage(homepage);
@@ -333,7 +336,8 @@ public class PackageMojo extends AbstractMojo {
         while(scanner.hasNextLine()) {
             String line = scanner.nextLine();
             if (result.length() == 0) { //first line is trimmed by maven
-                result.append(line.trim()).append('\n');
+                line = line.substring(countWhitespaces(line)); // trim leading spaces just in case
+                result.append(line);
                 continue;
             }
             int ws = countWhitespaces(line);
@@ -342,8 +346,13 @@ public class PackageMojo extends AbstractMojo {
             lines.add(line);
         }
         for (String line: lines)
-            if (line.length() > maxWhitespaces) // empty lines left as is
-                result.append(line.substring(maxWhitespaces)).append('\n');
+            if (line.length() > maxWhitespaces) // short lines considered empty
+                result.append('\n').append(line.substring(maxWhitespaces));
+            else
+                result.append('\n');
+        for (int i = result.length(); i > 0; i--)
+            if (result.charAt(i - 1) != '\n')
+                return result.substring(0, i);
         return result.toString();
     }
 
