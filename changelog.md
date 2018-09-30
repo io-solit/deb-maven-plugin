@@ -11,9 +11,9 @@ and this project adheres to [Semantic Versioning](http://semver.org/spec/v2.0.0.
 *  `package` goal failed with npe if `autoDependencies` set to false and no
    `packageAttributes` present in configuration
 *  empty lines were ignored in package description
-*  snapshot package version is based was base on local time instead of UTC
+*  snapshot package version was based on local time instead of UTC
 *  `populate` goal created empty '/usr/share/<package>' directory if project 
-   has no runtime dependencies 
+   had no runtime dependencies 
 
 ## [1.0-RC1] - 2018-03-18
 ### Added
