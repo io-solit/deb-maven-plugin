@@ -282,7 +282,7 @@ public class PackageMojo extends AbstractMojo {
         Files.walkFileTree(start, EnumSet.of(FileVisitOption.FOLLOW_LINKS), Integer.MAX_VALUE, fv);
     }
 
-    private void writeLinks() {
+    private void writeLinks(TarArchiveOutputStream dataArchive) throws IOException {
         if (symbolicLinks == null || symbolicLinks.isEmpty())
             return;
         for (Link lnk: symbolicLinks) {
@@ -297,6 +297,8 @@ public class PackageMojo extends AbstractMojo {
             //noinspection OctalInteger
             tarArchiveEntry.setMode(0120777);
             tarArchiveEntry.setLinkName(lnk.getLinkDestination().trim());
+            dataArchive.putArchiveEntry(tarArchiveEntry);
+            dataArchive.closeArchiveEntry();
         }
     }
 
@@ -493,7 +495,7 @@ public class PackageMojo extends AbstractMojo {
                 }
                 try (TarArchiveOutputStream dataArchive = deb.openData()) {
                     copyDataFiles(dataArchive);
-                    writeLinks();
+                    writeLinks(dataArchive);
                 }
             }
         } catch (IllegalArgumentException e) {
